@@ -64,6 +64,22 @@
             from { opacity: 0; transform: scale(0.95); }
             to { opacity: 1; transform: scale(1); }
         }
+        .toggle-btn {
+            background-color: #e2e8f0;
+            color: #475569;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+            border-radius: 9999px;
+            transition: all 0.2s ease-in-out;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+        .toggle-btn.active {
+            background-color: #16a34a;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
     </style>
 </head>
 <body class="p-6 md:p-12">
@@ -81,6 +97,15 @@
             <p class="text-sm font-light text-slate-400 mt-2">
                 Last updated: <span id="last-updated-time"></span>
             </p>
+            
+            <!-- Toggle Button for Sheets -->
+            <div class="mt-6 flex justify-center items-center space-x-4">
+                <span class="font-semibold text-slate-600">Select Sheet:</span>
+                <div class="inline-flex rounded-full bg-slate-200 p-1">
+                    <button id="toggle-E" class="toggle-btn active">E</button>
+                    <button id="toggle-D" class="toggle-btn">D</button>
+                </div>
+            </div>
         </div>
         
         <!-- Loading Spinner - Now centrally located -->
@@ -121,16 +146,15 @@
         // Use a self-invoking function to keep variables out of the global scope
         (async function() {
             // --- Configuration and Constants ---
-            // The original, "published to the web" Google Sheet URL.
-            const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS4BeM4ha9wTdX-ScDVTRVplqmaEMcMCpsQMNb014ULJV8A5Ig9qNJE5it3NX28b3vyjFZ3tPRB9_5R/pub?output=csv';
+            const BASE_GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS4BeM4ha9wTdX-ScDVTRVplqmaEMcMCpsQMNb014ULJV8A5Ig9qNJE5it3NX28b3vyjFZ3tPRB9_5R/pub';
 
-            // We're using a proxy to handle the redirect issue. This proxy will fetch the data for us.
-            // **DO NOT EDIT THIS URL, it is a stable service for this purpose.**
+            // --- IMPORTANT: Update these GIDs with your actual sheet Group IDs ---
+            const SHEET_E_GID = '0'; // Placeholder for Sheet 'E'
+            const SHEET_D_GID = '1006450505'; // Placeholder for Sheet 'D'
+
+            // We're using a proxy to handle the redirect issue.
             const PROXY_URL = 'https://api.allorigins.win/raw?url=';
             
-            // This is the final URL the app will use to fetch data through the proxy.
-            const DATA_SOURCE_URL = `${PROXY_URL}${encodeURIComponent(GOOGLE_SHEET_URL)}`;
-
             const totalFloors = 11;
             const flatsPerFloor = 15;
             const updateInterval = 5 * 60 * 1000; // 5 minutes in milliseconds
@@ -145,8 +169,11 @@
             const totalAmountEl = document.getElementById('total-amount');
             const currentDateEl = document.getElementById('current-date');
             const lastUpdatedTimeEl = document.getElementById('last-updated-time');
+            const toggleButtonE = document.getElementById('toggle-E');
+            const toggleButtonD = document.getElementById('toggle-D');
 
             let dataMap = new Map();
+            let currentSheetGID = SHEET_E_GID; // Default to sheet 'E'
 
             // --- Helper Functions ---
             function showMessage(message, type = 'error') {
@@ -165,6 +192,7 @@
             }
 
             function csvToJson(csvText) {
+                console.log('Raw CSV Text:', csvText);
                 const lines = csvText.split('\n');
                 if (lines.length === 0) return [];
 
@@ -182,23 +210,27 @@
                     }
                     result.push(obj);
                 }
+                console.log('Parsed JSON Data:', result);
                 return result;
             }
 
             async function loadData() {
                 loadingSpinner.classList.remove('hidden');
                 let csvText = '';
+                
+                // Construct the URL based on the currently selected sheet's GID
+                const dataSourceUrl = `${PROXY_URL}${encodeURIComponent(`${BASE_GOOGLE_SHEET_URL}?gid=${currentSheetGID}&single=true&output=csv`)}`;
+                console.log(`Attempting to fetch data from: ${dataSourceUrl}`);
 
                 try {
-                    const response = await fetch(DATA_SOURCE_URL);
+                    const response = await fetch(dataSourceUrl);
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
                     csvText = await response.text();
-                    console.log('Successfully fetched data from Google Sheet!');
+                    console.log(`Successfully fetched data from Google Sheet with GID: ${currentSheetGID}!`);
                 } catch (error) {
                     console.error('Error fetching data from Google Sheet:', error);
-                    // No fallback, just show a message.
                     showMessage(`Failed to connect to your Google Sheet. Error: ${error.message}. Please check your internet connection or the spreadsheet URL.`, 'error');
                     return [];
                 } finally {
@@ -218,10 +250,14 @@
 
             function renderApartmentGrid(apartmentData) {
                 gridContainer.innerHTML = ''; // Clear existing tiles
+                console.log(`Rendering grid with ${apartmentData.length} data entries.`);
 
                 dataMap = new Map();
                 apartmentData.forEach(item => {
-                    dataMap.set(item.FlatNumber, item);
+                    // Check if the FlatNumber is a valid key before adding
+                    if (item.FlatNumber) {
+                        dataMap.set(item.FlatNumber, item);
+                    }
                 });
 
                 for (let floor = 1; floor <= totalFloors; floor++) {
@@ -270,7 +306,7 @@
             function showApartmentDetails(flatNumber) {
                 const apartment = dataMap.get(flatNumber) || { FlatNumber: flatNumber, OwnerName: '', Amount: '', Mode: '' };
 
-                modalTitle.textContent = `Flat: E-${apartment.FlatNumber}`;
+                modalTitle.textContent = `Flat ${apartment.FlatNumber}`;
                 
                 let detailsHtml = '<ul class="list-disc list-inside space-y-2">';
                 if (apartment.OwnerName && apartment.OwnerName.trim() !== '') detailsHtml += `<li><span class="font-semibold">Owner Name:</span> ${apartment.OwnerName}</li>`;
@@ -309,18 +345,45 @@
                     hour: '2-digit', minute: '2-digit'
                 });
             }
+
+            function handleSheetToggle(selectedSheet) {
+                currentSheetGID = selectedSheet === 'E' ? SHEET_E_GID : SHEET_D_GID;
+                
+                // Update button styles
+                if (selectedSheet === 'E') {
+                    toggleButtonE.classList.add('active');
+                    toggleButtonD.classList.remove('active');
+                } else {
+                    toggleButtonD.classList.add('active');
+                    toggleButtonE.classList.remove('active');
+                }
+
+                // Fetch and update data for the new sheet
+                fetchAndUpdate();
+            }
             
             // Encapsulate the core update logic into a single function
             async function fetchAndUpdate() {
+                console.log('Starting data fetch and update cycle...');
                 const apartmentData = await loadData();
                 if (apartmentData.length > 0) {
                     renderApartmentGrid(apartmentData);
                     updateSummary(apartmentData);
                     updateLastUpdatedTime();
+                    console.log('Data successfully processed and rendered.');
+                } else {
+                    console.log('No data to process. Clearing grid and summary.');
+                    // Clear the grid and summary if data load fails
+                    gridContainer.innerHTML = '';
+                    totalAmountEl.textContent = '₹0';
                 }
             }
 
             // --- Main Execution Flow ---
+            // Set up event listeners for the toggle buttons
+            toggleButtonE.addEventListener('click', () => handleSheetToggle('E'));
+            toggleButtonD.addEventListener('click', () => handleSheetToggle('D'));
+            
             // Run on page load
             fetchAndUpdate();
             
