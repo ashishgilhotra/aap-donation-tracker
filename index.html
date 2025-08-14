@@ -12,9 +12,9 @@
             font-family: 'Inter', sans-serif;
             background-color: #f0f5f9; /* A soft, light blue-gray background */
         }
-        /* Custom CSS to create a 15-column grid */
+        /* Custom CSS to create a 15-column grid with a fixed width for each column */
         .grid-cols-15 {
-            grid-template-columns: repeat(15, minmax(0, 1fr));
+            grid-template-columns: repeat(15, minmax(0, 1fr)); /* Reverting to a flexible grid layout */
         }
         /* Styling for the modal/popup */
         .modal {
@@ -120,7 +120,7 @@
         <!-- Scrollable Wrapper for the Grid -->
         <div class="overflow-x-auto w-full">
             <!-- Apartment Grid - Refined with new styling -->
-            <div id="apartment-grid" class="grid grid-cols-15 gap-1 border-4 border-lime-200 p-2 rounded-3xl">
+            <div id="apartment-grid" class="grid grid-cols-15 gap-1 border-4 border-lime-200 p-2 rounded-3xl min-w-max">
                 <!-- Tiles will be dynamically inserted here by JavaScript -->
             </div>
         </div>
