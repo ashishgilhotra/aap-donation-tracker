@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Apartment Donation Visualizer</title>
+    <!-- Use Tailwind CSS for easy styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+        }
+        /* Custom CSS to create a 15-column grid */
+        .grid-cols-15 {
+            grid-template-columns: repeat(15, minmax(0, 1fr));
+        }
+        /* Styling for the modal/popup */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(5px);
+            justify-content: center;
+            align-items: center;
+        }
+        /* New class to show the modal */
+        .modal.show-modal {
+            display: flex;
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 1rem;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1-px rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out;
+        }
+        .close-button {
+            float: right;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #aaa;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #000;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+    </style>
+</head>
+<body class="p-6 md:p-12">
+
+    <!-- Main Container -->
+    <div class="max-w-7xl mx-auto bg-white p-8 rounded-2xl shadow-xl">
+
+        <!-- Header Section -->
+        <div class="text-center mb-10">
+            <h1 class="text-4xl font-extrabold text-gray-800 tracking-tight mb-2">Apartment Donation Tracker</h1>
+            <!-- Replaced the original text with a dynamic summary of total donations -->
+            <p class="text-lg text-gray-500">
+                Total Donations Received as of <span id="current-date" class="font-bold"></span>:
+                <span id="total-amount" class="text-2xl font-extrabold text-green-600 ml-2"></span>
+            </p>
+        </div>
+
+        <!-- The loading spinner has been moved here to be part of the main page flow -->
+        <div id="loading-spinner" class="flex items-center justify-center space-x-2 text-gray-500 mb-8 hidden">
+            <svg class="animate-spin h-5 w-5 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading data...</span>
+        </div>
+
+        <!-- Apartment Grid -->
+        <div id="apartment-grid" class="grid grid-cols-15 gap-2 border-2 border-gray-300 p-4 rounded-xl">
+            <!-- Tiles will be dynamically inserted here by JavaScript -->
+        </div>
+
+    </div>
+
+    <!-- Message Box (replaces alert()) -->
+    <div id="message-box" class="fixed inset-x-0 bottom-4 flex justify-center hidden">
+        <div class="bg-red-500 text-white p-4 rounded-lg shadow-lg">
+            <p id="message-text"></p>
+        </div>
+    </div>
+
+    <!-- Modal for detailed information -->
+    <div id="info-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" onclick="closeModal()">&times;</span>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4">Apartment Details</h2>
+            <div id="modal-body" class="text-gray-700">
+                <!-- Details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Use a self-invoking function to keep variables out of the global scope
+        (async function() {
+            // --- Configuration and Constants ---
+            // This is the local data used as a fallback if the network request fails.
+            const LOCAL_CSV_DATA = `FlatNumber,OwnerName,Amount,Mode
+101,Sopnil pawar,1251,UPI
+102,,,
+103,,,
+104,pankaj c,1251,Upi
+105,Arya,1251,UPI
+106,,,
+107,,,
+108,,,
+109,,,
+110,,,
+111,,,
+112,,,
+113,,,
+114,,,
+115,suhas roajole,1251,upi
+201,,,
+202,,,
+203,Grish mehta,1251,UPI
+204,,,
+205,Anilkumar,1251,UPI
+206,,,
+207,,,
+208,,,
+209,,,
+210,Satish kumar,1251,UPI
+211,Ashish chawda,1251,UPI
+212,,,
+213,Mithun,1251,UPI
+214,,,
+215,Ashutosh pathak,1251,upi
+301,Rahul Singhai,1251,UPI
+302,,,
+303,Rahul tiwari,1251,G pay
+304,,,
+305,Kirubakaran,500,G pay
+306,,,
+307,,,
+308,,,
+309,,,
+310,,,
+311,Shilkumar jadhav,1251,Gpay
+312,Dipti Agrwal5,1251,Gpay
+313,Kartika,1251,G pay
+314,,,
+315,,,
+401,,,
+402,,,
+403,,,
+404,,,
+405,,,
+406,,,
+407,,,
+408,,,
+409,,,
+410,SUMIT KEKRE,1251,
+411,SHUBHAM,1251,G PAY
+412,,,
+413,Manish Tiwari,1251,
+414,Maneesh Mishra,1251,UPI
+415,Rajaram,1251,G pay
+501,Arpan tyagi,1251,UPI
+502,,,
+503,,,
+504,Ameya,1250,UPI
+505,Akshay domde,1250,UPI
+506,pratik kumar,1251,UPI
+507,,,
+508,,,
+509,,,
+510,,,
+511,fenil bhoot,1251,upi
+512,pavan dixit,1251,Upi
+513,Dhreej bali,1251,UPI
+514,Deepali gupta,1251,upi
+515,yajjesh arya,1251,UPI
+601,Rekharateke,1251,UPI
+602,,,
+603,,,
+604,mayank nigam,1251,UPI
+605,Doorwar,1251,UPI
+606,p.g.tighare,1251,UPI
+607,,,
+608,Nitin shome,1251,UPI
+609,B. sah,1251,UPI
+610,,,
+611,,,
+612,,,
+613,,,
+614,,,
+615,,,
+701,,,
+702,Mahendra Patil,1251,UPI
+703,Shailesh D,1251,UPI
+704,Shatrughna Sinha,1251,UPI
+705,,,
+706,,,
+707,,,
+708,,,
+709,Gaurav Bhise,1251,UPI
+710,,,
+711,Rishi Kumar,1251,UPI
+712,Ashish G,1251,UPI
+713,,,
+714,,,
+715,Satyendra Londhe,1251,UPI
+801,,,
+802,,,
+803,Sajid P,1251,UPI
+804,,,
+805,Rajib R,1251,UPI
+806,,,
+807,,,
+808,,,
+809,Ganesh Dhumale,1251,UPI
+810,,,
+811,,,
+812,Shreyash R,1251,UPI
+813,,,
+814,Rishi Mahendru,1251,UPI
+815,Ravi Gupta,2100,UPI
+901,Priya Rashmi,1251,UPI
+902,,,
+903,Sonam Rai,1500,UPI
+904,,,
+905,NB Shukla,1251,UPI
+906,,,
+907,Yogesh Kulkarni,1251,UPI
+908,,,
+909,,,
+910,Umesh,1251,UPI
+911,,,
+912,,,
+913,,,
+914,,,
+915,,,
+1001,,,
+1002,,,
+1003,,,
+1004,,,
+1005,,,
+1006,Sugam Sah,1001,UPI
+1007,Punam Chnad Dhuppad,1001,UPI
+1008,,,
+1009,Rajdev Singh,1251,UPI
+1010,Roshan Shetty,1251,UPI
+1011,,,
+1012,Keyur,1251,UPI
+1013,,,
+1014,,,
+1015,Brajesh,1251,UPI
+1101,,,
+1102,,,
+1103,,,
+1104,,,
+1105,,,
+1106,,,
+1107,,,
+1108,,,
+1109,Prakash Chotrani,1251,UPI
+1110,Ankur Shrivastva,1251,UPI
+1111,,,
+1112,,,
+1113,,,
+1114,,,
+1115,,,`;
+
+            // The original, "published to the web" Google Sheet URL.
+            const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS4BeM4ha9wTdX-ScDVTRVplqmaEMcMCpsQMNb014ULJV8A5Ig9qNJE5it3NX28b3vyjFZ3tPRB9_5R/pub?output=csv';
+
+            // We're using a proxy to handle the redirect issue. This proxy will fetch the data for us.
+            // **DO NOT EDIT THIS URL, it is a stable service for this purpose.**
+            const PROXY_URL = 'https://api.allorigins.win/raw?url=';
+            
+            // This is the final URL the app will use to fetch data through the proxy.
+            const DATA_SOURCE_URL = `${PROXY_URL}${encodeURIComponent(GOOGLE_SHEET_URL)}`;
+
+            const totalFloors = 11;
+            const flatsPerFloor = 15;
+            const gridContainer = document.getElementById('apartment-grid');
+            const loadingSpinner = document.getElementById('loading-spinner');
+            const messageBox = document.getElementById('message-box');
+            const messageText = document.getElementById('message-text');
+            const infoModal = document.getElementById('info-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalBody = document.getElementById('modal-body');
+            // New elements for the header summary
+            const totalAmountEl = document.getElementById('total-amount');
+            const currentDateEl = document.getElementById('current-date');
+
+            // This map is in a higher scope so it can be accessed by both render and modal functions.
+            let dataMap = new Map();
+
+            // --- Helper Functions ---
+            /**
+             * Displays a message box for a short duration.
+             * @param {string} message - The message to display.
+             * @param {string} type - 'success' or 'error'.
+             */
+            function showMessage(message, type = 'error') {
+                messageText.textContent = message;
+                messageBox.classList.remove('hidden');
+                if (type === 'success') {
+                    messageBox.classList.remove('bg-red-500');
+                    messageBox.classList.add('bg-green-500');
+                } else {
+                    messageBox.classList.remove('bg-green-500');
+                    messageBox.classList.add('bg-red-500');
+                }
+                setTimeout(() => {
+                    messageBox.classList.add('hidden');
+                }, 5000);
+            }
+
+            /**
+             * Converts CSV text to an array of JavaScript objects.
+             * Assumes the first row is the header.
+             * @param {string} csvText - The raw CSV string.
+             * @returns {Array} - An array of objects.
+             */
+            function csvToJson(csvText) {
+                const lines = csvText.split('\n');
+                if (lines.length === 0) return [];
+
+                const headers = lines[0].split(',').map(header => header.trim());
+                const result = [];
+
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line === '') continue;
+
+                    const values = line.split(',').map(value => value.trim());
+                    const obj = {};
+                    for (let j = 0; j < headers.length; j++) {
+                        // Dynamically assign properties based on headers
+                        obj[headers[j]] = values[j];
+                    }
+                    result.push(obj);
+                }
+                return result;
+            }
+
+            /**
+             * Main data loading function. Fetches from a Google Sheet and falls back to local data if it fails.
+             */
+            async function loadData() {
+                loadingSpinner.classList.remove('hidden');
+                let csvText = '';
+
+                try {
+                    // Log the URL we are trying to fetch for debugging purposes.
+                    console.log(`Attempting to fetch from: ${DATA_SOURCE_URL}`);
+                    
+                    const response = await fetch(DATA_SOURCE_URL);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    csvText = await response.text();
+                    console.log('Successfully fetched data from Google Sheet!');
+                } catch (error) {
+                    console.error('Error fetching data from Google Sheet:', error);
+                    console.log('Using local data as a fallback.');
+                    // The error message is now more informative
+                    showMessage(`Failed to connect to your Google Sheet. Error: ${error.message}. Using local data as a fallback.`, 'error');
+                    csvText = LOCAL_CSV_DATA;
+                }
+                
+                if (!csvText) {
+                    showMessage('Failed to load any data from the provided URL or local variable.', 'error');
+                    loadingSpinner.classList.add('hidden');
+                    return [];
+                }
+                
+                try {
+                    const jsonData = csvToJson(csvText);
+                    return jsonData;
+                } catch (jsonError) {
+                    console.error('Error parsing CSV to JSON:', jsonError);
+                    showMessage('The data was loaded but could not be parsed. Please check the format of your CSV data.', 'error');
+                    return [];
+                } finally {
+                    loadingSpinner.classList.add('hidden');
+                }
+            }
+
+
+            /**
+             * Renders the apartment tiles based on the provided data.
+             * This function has been updated to match the flat numbering in your CSV data.
+             * @param {Array} apartmentData - An array of apartment objects.
+             */
+            function renderApartmentGrid(apartmentData) {
+                gridContainer.innerHTML = ''; // Clear existing tiles
+
+                // Create a map for quick lookup by FlatNumber
+                dataMap = new Map();
+                apartmentData.forEach(item => {
+                    dataMap.set(item.FlatNumber, item);
+                });
+
+                // Generate tiles for the full 11 floors and 15 flats per floor
+                for (let floor = 1; floor <= totalFloors; floor++) {
+                    for (let flat = 1; flat <= flatsPerFloor; flat++) {
+                        // Correctly format the flat number to match the CSV data (e.g., 101, 102, 201)
+                        const flatNumber = `${floor}${flat.toString().padStart(2, '0')}`;
+                        const apartment = dataMap.get(flatNumber);
+
+                        const tile = document.createElement('div');
+                        // Added 'text-center' to ensure the content is horizontally centered
+                        tile.classList.add(
+                            'w-full', 'aspect-square', 'rounded-lg', 'shadow-sm', 'flex', 'flex-col', 'items-center',
+                            'justify-center', 'text-sm', 'font-medium', 'transition-colors',
+                            'duration-300', 'ease-in-out', 'border', 'border-gray-300', 'cursor-pointer', 'text-center'
+                        );
+
+                        let hasDonation = false;
+                        // Check if the 'Amount' column has a value
+                        if (apartment && apartment.Amount && apartment.Amount.trim() !== '') {
+                            hasDonation = true;
+                            tile.classList.add('bg-green-500', 'text-white', 'hover:bg-green-600');
+                        } else {
+                            tile.classList.add('bg-white', 'text-gray-500', 'hover:bg-gray-100');
+                        }
+                        
+                        // Always display the flat number
+                        const flatNumberDiv = document.createElement('div');
+                        flatNumberDiv.classList.add('text-lg', 'font-bold');
+                        flatNumberDiv.textContent = flatNumber;
+                        tile.appendChild(flatNumberDiv);
+
+                        // Display the donation message if applicable
+                        if (hasDonation) {
+                            const donationDiv = document.createElement('div');
+                            donationDiv.classList.add('text-sm');
+                            donationDiv.textContent = 'Donation made!';
+                            tile.appendChild(donationDiv);
+                        }
+
+                        // Add event listener for interactivity for every tile
+                        // Pass the flat number directly to avoid closure issues
+                        tile.addEventListener('click', () => showApartmentDetails(flatNumber));
+                        
+                        gridContainer.appendChild(tile);
+                    }
+                }
+            }
+
+            /**
+             * Populates and shows the modal with apartment details.
+             * @param {string} flatNumber - The flat number to display details for.
+             */
+            function showApartmentDetails(flatNumber) {
+                // Look up the data using the flat number
+                const apartment = dataMap.get(flatNumber) || { FlatNumber: flatNumber, OwnerName: '', Amount: '', Mode: '' };
+
+                modalTitle.textContent = `Flat ${apartment.FlatNumber}`;
+                
+                let detailsHtml = '<ul class="list-disc list-inside space-y-2">';
+                // Check if the data exists before adding it to the modal
+                if (apartment.OwnerName && apartment.OwnerName.trim() !== '') detailsHtml += `<li><span class="font-semibold">Owner Name:</span> ${apartment.OwnerName}</li>`;
+                if (apartment.Amount && apartment.Amount.trim() !== '') detailsHtml += `<li><span class="font-semibold">Amount:</span> ${apartment.Amount}</li>`;
+                if (apartment.Mode && apartment.Mode.trim() !== '') detailsHtml += `<li><span class="font-semibold">Mode:</span> ${apartment.Mode}</li>`;
+                
+                // Show a message if no donation details are available
+                if (!apartment.OwnerName && !apartment.Amount && !apartment.Mode) {
+                    detailsHtml += `<li>No donation details available.</li>`;
+                }
+                
+                detailsHtml += '</ul>';
+
+                modalBody.innerHTML = detailsHtml;
+                infoModal.classList.add('show-modal'); // Use a class to show the modal
+            }
+
+            /**
+             * Closes the apartment details modal.
+             */
+            window.closeModal = function() {
+                infoModal.classList.remove('show-modal'); // Use a class to hide the modal
+            }
+            
+            /**
+             * Calculates and displays the total donation amount and current date.
+             * @param {Array} apartmentData - The full array of apartment data.
+             */
+            function updateSummary(apartmentData) {
+                // Calculate the total donations by iterating through the data
+                const total = apartmentData.reduce((sum, flat) => {
+                    // Convert the amount to a number, defaulting to 0 if it's not a valid number
+                    const amount = parseFloat(flat.Amount);
+                    return isNaN(amount) ? sum : sum + amount;
+                }, 0);
+
+                // Format the total amount for display in Indian Rupees (₹)
+                totalAmountEl.textContent = `₹${total.toLocaleString('en-IN')}`;
+
+                // Display the current date in a user-friendly format
+                currentDateEl.textContent = new Date().toLocaleDateString('en-IN', {
+                    year: 'numeric', month: 'long', day: 'numeric'
+                });
+            }
+
+            // --- Main Execution Flow ---
+            // Load the data and then render the grid
+            const apartmentData = await loadData();
+            renderApartmentGrid(apartmentData);
+            // Call the new function to update the header summary
+            updateSummary(apartmentData);
+
+        })();
+    </script>
+</body>
+</html>
