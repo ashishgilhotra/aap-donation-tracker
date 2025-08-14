@@ -14,7 +14,7 @@
         }
         /* Custom CSS to create a 15-column grid with a fixed width for each column */
         .grid-cols-15 {
-            grid-template-columns: repeat(15, minmax(0, 1fr)); /* Reverting to a flexible grid layout */
+            grid-template-columns: repeat(15, minmax(0, 1fr));
         }
         /* Styling for the modal/popup */
         .modal {
@@ -75,10 +75,16 @@
             border: none;
             outline: none;
         }
+        .toggle-btn:hover {
+            background-color: #cbd5e1;
+        }
         .toggle-btn.active {
             background-color: #16a34a;
             color: white;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .toggle-btn.active:hover {
+            background-color: #15803d;
         }
     </style>
 </head>
@@ -90,20 +96,24 @@
         <!-- Header Section -->
         <div class="text-center mb-10">
             <h1 class="text-5xl font-extrabold text-slate-800 tracking-tight mb-4">Aeropolis Phase 2 - Donation Tracker</h1>
-            <p class="text-lg font-light text-slate-600">
+            <p class="text-lg font-light text-slate-600 mb-2">
                 Total Donations Received as of <span id="current-date" class="font-semibold"></span>:
                 <span id="total-amount" class="text-3xl font-extrabold text-lime-600 ml-2"></span>
+            </p>
+            <!-- Donation count and total flats added -->
+            <p class="text-base font-light text-slate-600 mt-2">
+                Donated: <span id="donation-count" class="font-bold text-lime-600">0</span> of <span id="total-flats" class="font-bold text-slate-600">0</span> Apartments
             </p>
             <p class="text-sm font-light text-slate-400 mt-2">
                 Last updated: <span id="last-updated-time"></span>
             </p>
             
             <!-- Toggle Button for Sheets -->
-            <div class="mt-6 flex justify-center items-center space-x-4">
-                <span class="font-semibold text-slate-600">Select WING:</span>
+            <div class="mt-6 flex flex-col items-center space-y-2">
+                <span class="font-semibold text-slate-600">Select Apartment Wing:</span>
                 <div class="inline-flex rounded-full bg-slate-200 p-1">
-                    <button id="toggle-E" class="toggle-btn active">E</button>
-                    <button id="toggle-D" class="toggle-btn">D</button>
+                    <button id="toggle-E" class="toggle-btn active">Wing E</button>
+                    <button id="toggle-D" class="toggle-btn">Wing D</button>
                 </div>
             </div>
         </div>
@@ -160,6 +170,7 @@
             
             const totalFloors = 11;
             const flatsPerFloor = 15;
+            const totalFlats = totalFloors * flatsPerFloor;
             const updateInterval = 5 * 60 * 1000; // 5 minutes in milliseconds
 
             const gridContainer = document.getElementById('apartment-grid');
@@ -174,6 +185,8 @@
             const lastUpdatedTimeEl = document.getElementById('last-updated-time');
             const toggleButtonE = document.getElementById('toggle-E');
             const toggleButtonD = document.getElementById('toggle-D');
+            const donationCountEl = document.getElementById('donation-count');
+            const totalFlatsEl = document.getElementById('total-flats');
 
             let dataMap = new Map();
             let currentSheetGID = SHEET_E_GID; // Default to sheet 'E'
@@ -311,19 +324,33 @@
             function showApartmentDetails(flatNumber) {
                 const apartment = dataMap.get(flatNumber) || { FlatNumber: flatNumber, OwnerName: '', Amount: '', Mode: '' };
 
-                modalTitle.textContent = `Flat ${apartment.FlatNumber}`;
+                modalTitle.textContent = `Flat: ${apartment.FlatNumber}`;
                 
-                let detailsHtml = '<ul class="list-disc list-inside space-y-2">';
-                if (apartment.OwnerName && apartment.OwnerName.trim() !== '') detailsHtml += `<li><span class="font-semibold">Owner Name:</span> ${apartment.OwnerName}</li>`;
-                if (apartment.Amount && apartment.Amount.trim() !== '') detailsHtml += `<li><span class="font-semibold">Amount:</span> ${apartment.Amount}</li>`;
-                if (apartment.Mode && apartment.Mode.trim() !== '') detailsHtml += `<li><span class="font-semibold">Mode:</span> ${apartment.Mode.toUpperCase()}</li>`;
-                
-                if (!apartment.OwnerName && !apartment.Amount && !apartment.Mode) {
-                    detailsHtml += `<li>No donation details available.</li>`;
+                let detailsHtml = '';
+
+                // Refined modal message for apartments with no donations
+                if (!apartment.Amount) {
+                    detailsHtml = '<ul class="list-disc list-inside space-y-2">';
+                    if (apartment.OwnerName && apartment.OwnerName.trim() !== '') detailsHtml += `<li><span class="font-semibold">Owner Name:</span> ${apartment.OwnerName}</li>`;
+                    detailsHtml += '</ul>'
+                    detailsHtml += `
+                        <div class="flex flex-col items-center justify-center space-y-4 text-center p-4">
+                            <svg class="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 012 2v2m-4 5v-2a2 2 0 012-2h2a2 2 0 012 2v2m-6 0v-2a2 2 0 012-2h2a2 2 0 012 2v2"></path>
+                            </svg>
+                            
+                            <p class="text-xl font-semibold text-slate-500">No donation recorded yet.</p>
+                            <p class="text-sm text-slate-400">This flat has not made a donation.</p>
+                        </div>
+                    `;
+                } else {
+                    detailsHtml = '<ul class="list-disc list-inside space-y-2">';
+                    if (apartment.OwnerName && apartment.OwnerName.trim() !== '') detailsHtml += `<li><span class="font-semibold">Owner Name:</span> ${apartment.OwnerName}</li>`;
+                    if (apartment.Amount && apartment.Amount.trim() !== '') detailsHtml += `<li><span class="font-semibold">Amount:</span> ${apartment.Amount}</li>`;
+                    if (apartment.Mode && apartment.Mode.trim() !== '') detailsHtml += `<li><span class="font-semibold">Mode:</span> ${apartment.Mode.toUpperCase()}</li>`;
+                    detailsHtml += '</ul>';
                 }
                 
-                detailsHtml += '</ul>';
-
                 modalBody.innerHTML = detailsHtml;
                 infoModal.classList.add('show-modal');
             }
@@ -333,12 +360,18 @@
             }
             
             function updateSummary(apartmentData) {
+                // Calculate total amount
                 const total = apartmentData.reduce((sum, flat) => {
                     const amount = parseFloat(flat.Amount);
                     return isNaN(amount) ? sum : sum + amount;
                 }, 0);
 
                 totalAmountEl.textContent = `₹${total.toLocaleString('en-IN')}`;
+
+                // Calculate donation count
+                const donationCount = apartmentData.filter(flat => flat.Amount && flat.Amount.trim() !== '').length;
+                donationCountEl.textContent = donationCount;
+                totalFlatsEl.textContent = totalFlats;
 
                 currentDateEl.textContent = new Date().toLocaleDateString('en-IN', {
                     year: 'numeric', month: 'long', day: 'numeric'
@@ -351,11 +384,11 @@
                 });
             }
 
-            function handleSheetToggle(selectedSheet) {
-                currentSheetGID = selectedSheet === 'E' ? SHEET_E_GID : SHEET_D_GID;
+            function handleSheetToggle(selectedWing) {
+                currentSheetGID = selectedWing === 'E' ? SHEET_E_GID : SHEET_D_GID;
                 
                 // Update button styles
-                if (selectedSheet === 'E') {
+                if (selectedWing === 'E') {
                     toggleButtonE.classList.add('active');
                     toggleButtonD.classList.remove('active');
                 } else {
@@ -381,6 +414,8 @@
                     // Clear the grid and summary if data load fails
                     gridContainer.innerHTML = '';
                     totalAmountEl.textContent = '₹0';
+                    donationCountEl.textContent = '0';
+                    totalFlatsEl.textContent = totalFlats;
                 }
             }
 
