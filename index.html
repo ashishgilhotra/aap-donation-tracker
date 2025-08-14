@@ -85,7 +85,7 @@
 <body class="p-6 md:p-12">
 
     <!-- Main Container - A new, more modern look -->
-    <div class="max-w-7xl mx-auto bg-white p-8 md:p-12 rounded-3xl shadow-2xl">
+    <div class="max-w-7xl mx-auto bg-white p-6 md:p-8 rounded-3xl shadow-2xl">
 
         <!-- Header Section -->
         <div class="text-center mb-10">
@@ -100,7 +100,7 @@
             
             <!-- Toggle Button for Sheets -->
             <div class="mt-6 flex justify-center items-center space-x-4">
-                <span class="font-semibold text-slate-600">Select Sheet:</span>
+                <span class="font-semibold text-slate-600">Select Wing:</span>
                 <div class="inline-flex rounded-full bg-slate-200 p-1">
                     <button id="toggle-E" class="toggle-btn active">E</button>
                     <button id="toggle-D" class="toggle-btn">D</button>
@@ -117,9 +117,12 @@
             <span>Fetching data from the spreadsheet...</span>
         </div>
 
-        <!-- Apartment Grid - Refined with new styling -->
-        <div id="apartment-grid" class="grid grid-cols-15 gap-2 border-4 border-lime-200 p-4 rounded-3xl">
-            <!-- Tiles will be dynamically inserted here by JavaScript -->
+        <!-- Scrollable Wrapper for the Grid -->
+        <div class="overflow-x-auto w-full">
+            <!-- Apartment Grid - Refined with new styling -->
+            <div id="apartment-grid" class="grid grid-cols-15 gap-1 border-4 border-lime-200 p-2 rounded-3xl min-w-max">
+                <!-- Tiles will be dynamically inserted here by JavaScript -->
+            </div>
         </div>
 
     </div>
@@ -269,8 +272,8 @@
                         // New styling for the tiles, with a hover effect for better user experience
                         tile.classList.add(
                             'w-full', 'aspect-square', 'rounded-xl', 'shadow-sm', 'flex', 'flex-col', 'items-center',
-                            'justify-center', 'text-sm', 'font-medium', 'transition-all',
-                            'duration-300', 'ease-in-out', 'border', 'border-gray-200', 'cursor-pointer', 'text-center',
+                            'justify-center', 'font-medium', 'transition-all', 'text-center',
+                            'duration-300', 'ease-in-out', 'border', 'border-gray-200', 'cursor-pointer',
                             'transform', 'hover:scale-105', 'hover:shadow-lg'
                         );
 
@@ -285,13 +288,15 @@
                         }
                         
                         const flatNumberDiv = document.createElement('div');
-                        flatNumberDiv.classList.add('text-lg', 'font-bold');
+                        // Smaller text size for the flat number
+                        flatNumberDiv.classList.add('text-sm', 'font-bold');
                         flatNumberDiv.textContent = flatNumber;
                         tile.appendChild(flatNumberDiv);
 
                         if (hasDonation) {
                             const donationDiv = document.createElement('div');
-                            donationDiv.classList.add('text-sm');
+                            // Now allows the text to break into a new line
+                            donationDiv.classList.add('text-xs', 'whitespace-normal', 'break-words', 'px-1');
                             donationDiv.textContent = 'Donation made!';
                             tile.appendChild(donationDiv);
                         }
