@@ -100,7 +100,7 @@
             
             <!-- Toggle Button for Sheets -->
             <div class="mt-6 flex justify-center items-center space-x-4">
-                <span class="font-semibold text-slate-600">Select Wing:</span>
+                <span class="font-semibold text-slate-600">Select Sheet:</span>
                 <div class="inline-flex rounded-full bg-slate-200 p-1">
                     <button id="toggle-E" class="toggle-btn active">E</button>
                     <button id="toggle-D" class="toggle-btn">D</button>
@@ -120,7 +120,7 @@
         <!-- Scrollable Wrapper for the Grid -->
         <div class="overflow-x-auto w-full">
             <!-- Apartment Grid - Refined with new styling -->
-            <div id="apartment-grid" class="grid grid-cols-15 gap-1 border-4 border-lime-200 p-2 rounded-3xl min-w-max">
+            <div id="apartment-grid" class="grid grid-cols-15 gap-1 border-4 border-lime-200 p-2 rounded-3xl">
                 <!-- Tiles will be dynamically inserted here by JavaScript -->
             </div>
         </div>
@@ -289,14 +289,14 @@
                         
                         const flatNumberDiv = document.createElement('div');
                         // Smaller text size for the flat number
-                        flatNumberDiv.classList.add('text-sm', 'font-bold');
+                        flatNumberDiv.classList.add('text-xs', 'font-bold');
                         flatNumberDiv.textContent = flatNumber;
                         tile.appendChild(flatNumberDiv);
 
                         if (hasDonation) {
                             const donationDiv = document.createElement('div');
                             // Now allows the text to break into a new line
-                            donationDiv.classList.add('text-xs', 'whitespace-normal', 'break-words', 'px-1');
+                            donationDiv.classList.add('text-[10px]', 'whitespace-normal', 'break-words', 'px-1');
                             donationDiv.textContent = 'Donation made!';
                             tile.appendChild(donationDiv);
                         }
