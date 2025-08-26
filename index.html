@@ -117,6 +117,14 @@
                 </div>
             </div>
         </div>
+
+        <!-- NEW: Summary section for collectors -->
+        <div class="mb-10 text-center">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Collection Summary by Collector</h2>
+            <div id="collector-summary-container" class="flex flex-wrap justify-center gap-4">
+                <!-- Collector data will be rendered here -->
+            </div>
+        </div>
         
         <!-- Loading Spinner - Now centrally located -->
         <div id="loading-spinner" class="flex items-center justify-center space-x-2 text-slate-400 mb-8 hidden">
@@ -187,6 +195,10 @@
             const toggleButtonD = document.getElementById('toggle-D');
             const donationCountEl = document.getElementById('donation-count');
             const totalFlatsEl = document.getElementById('total-flats');
+            
+            // NEW: Get the container for the collector summary
+            const collectorSummaryContainer = document.getElementById('collector-summary-container');
+
 
             let dataMap = new Map();
             let currentSheetGID = SHEET_E_GID; // Default to sheet 'E'
@@ -348,6 +360,7 @@
                     if (apartment.OwnerName && apartment.OwnerName.trim() !== '') detailsHtml += `<li><span class="font-semibold">Owner Name:</span> ${apartment.OwnerName}</li>`;
                     if (apartment.Amount && apartment.Amount.trim() !== '') detailsHtml += `<li><span class="font-semibold">Amount:</span> ${apartment.Amount}</li>`;
                     if (apartment.Mode && apartment.Mode.trim() !== '') detailsHtml += `<li><span class="font-semibold">Mode:</span> ${apartment.Mode.toUpperCase()}</li>`;
+                    if (apartment.CollectedBy && apartment.CollectedBy.trim() !== '') detailsHtml += `<li><span class="font-semibold">Collected By:</span> ${apartment.CollectedBy}</li>`;
                     detailsHtml += '</ul>';
                 }
                 
@@ -376,6 +389,52 @@
                 currentDateEl.textContent = new Date().toLocaleDateString('en-IN', {
                     year: 'numeric', month: 'long', day: 'numeric'
                 });
+                
+                // NEW: Calculate and render collector summary
+                renderCollectorSummary(apartmentData);
+            }
+
+            /**
+             * Calculates the total amount collected by each person and renders the summary.
+             * @param {Array<Object>} apartmentData The array of data objects from the sheet.
+             */
+            function renderCollectorSummary(apartmentData) {
+                const collectorTotals = new Map();
+
+                // Sum up the amounts for each collector
+                apartmentData.forEach(item => {
+                    const collectorName = item.CollectedBy;
+                    const amount = parseFloat(item.Amount);
+                    
+                    if (collectorName && collectorName.trim() !== '' && !isNaN(amount)) {
+                        const currentTotal = collectorTotals.get(collectorName) || 0;
+                        collectorTotals.set(collectorName, currentTotal + amount);
+                    }
+                });
+
+                // Clear the container
+                collectorSummaryContainer.innerHTML = '';
+
+                if (collectorTotals.size === 0) {
+                    collectorSummaryContainer.innerHTML = `
+                        <p class="text-sm font-light text-slate-500">No collection data available.</p>
+                    `;
+                } else {
+                    // Render the summary for each collector
+                    collectorTotals.forEach((total, name) => {
+                        const collectorDiv = document.createElement('div');
+                        collectorDiv.classList.add(
+                            'p-4', 'bg-lime-50', 'rounded-xl', 'shadow-sm', 'border', 'border-lime-200',
+                            'w-full', 'sm:w-auto', 'min-w-[150px]'
+                        );
+                        
+                        collectorDiv.innerHTML = `
+                            <p class="text-sm font-semibold text-slate-700">${name}</p>
+                            <p class="text-xl font-bold text-lime-600">₹${total.toLocaleString('en-IN')}</p>
+                        `;
+                        collectorSummaryContainer.appendChild(collectorDiv);
+                    });
+                }
             }
 
             function updateLastUpdatedTime() {
@@ -416,6 +475,8 @@
                     totalAmountEl.textContent = '₹0';
                     donationCountEl.textContent = '0';
                     totalFlatsEl.textContent = totalFlats;
+                    // Also clear the new summary section
+                    collectorSummaryContainer.innerHTML = `<p class="text-sm font-light text-slate-500">No collection data available.</p>`;
                 }
             }
 
